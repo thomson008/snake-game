@@ -43,6 +43,7 @@ module Game(
     wire reached_target;
     wire [6:0] vert_target;
     wire [7:0] horz_target;
+
     
     Master master (
         .FINISHED(finished),
@@ -104,6 +105,7 @@ module Game(
         .CLK(CLK),
         .RESET(RESET),
         .REACHED(reached_target),
+        .M_STATE(M_State),
         .TARGET_V(vert_target),
         .TARGET_H(horz_target)
     );
