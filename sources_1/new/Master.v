@@ -28,6 +28,7 @@ module Master(
     input BTN_D,
     input BTN_L,
     input BTN_R,
+    input HIT,
     output [1:0] STATE
     );
     
@@ -43,7 +44,7 @@ module Master(
     end
     
     //Combinational logic
-    always@(curr_state or BTN_L or BTN_R or BTN_U or BTN_D or FINISHED) begin
+    always@(curr_state or BTN_L or BTN_R or BTN_U or BTN_D or FINISHED or HIT) begin
         case (curr_state)
             
             2'b00: begin
@@ -54,7 +55,7 @@ module Master(
             end
             
             2'b01: begin
-                if (FINISHED)
+                if (FINISHED || HIT)
                     next_state <= 2'b10;
                 else
                     next_state <= curr_state;

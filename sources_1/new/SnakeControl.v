@@ -30,7 +30,8 @@ module SnakeControl(
     input [6:0] TARGET_V,
     input [7:0] TARGET_H,
     output REACHED,
-    output [11:0] COLOUR
+    output [11:0] COLOUR,
+    output HIT
     );
     
     // Initial snake length
@@ -44,20 +45,28 @@ module SnakeControl(
     reg [7:0] SnakeState_X [0:MaxSnakeLength - 1];
     reg [6:0] SnakeState_Y [0:MaxSnakeLength - 1];
     
-    wire [22:0] Counter;
+    wire [22:0] Counter [0:9];
     
     // Variable to express the current length of snake, will be incremented every time it reaches a target
     integer CurrLength = SnakeLength;
-
     
+    integer CountIdx = 0;
+
+    genvar CountNo;
+    
+    generate
+        for (CountNo = 0; CountNo < 10; CountNo = CountNo + 1)
+        begin: CountSelect
     // Count the clock cycles in order to move the snake every 1/20 second
-    Generic_counter # (.COUNTER_MAX(3999999), .COUNTER_WIDTH(22))
-        Move_Counter (
-            .CLK(CLK),
-            .ENABLE(1),
-            .RESET(RESET),
-            .COUNT(Counter)
-        );
+            Generic_counter # (.COUNTER_MAX(3999999 - CountNo * 200000), .COUNTER_WIDTH(22))
+                Move_Counter (
+                    .CLK(CLK),
+                    .ENABLE(1),
+                    .RESET(RESET),
+                    .COUNT(Counter[CountNo])
+                );
+        end
+    endgenerate
         
     
     genvar PixNo;
@@ -71,7 +80,7 @@ module SnakeControl(
                     SnakeState_Y[PixNo + 1] <= 100;
                 end
                 // To make a move, each snake element will inherit the coordinates from the element before it
-                else if (Counter == 0) begin
+                else if (Counter[CountIdx] == 0) begin
                     SnakeState_X[PixNo + 1] <= SnakeState_X[PixNo];
                     SnakeState_Y[PixNo + 1] <= SnakeState_Y[PixNo];
                 end
@@ -86,7 +95,7 @@ module SnakeControl(
             SnakeState_X[0] <= 80;
         end
         // Find the next coordinates of the snake's head based on which button was pressed
-        else if (Counter == 0) begin
+        else if (Counter[CountIdx] == 0) begin
             case (DIR)
             
                 // UP
@@ -128,6 +137,8 @@ module SnakeControl(
     reg [11:0] colour_out;
     reg is_snake;
     reg reached;
+    reg hit_itself;
+
     
     integer i;
     
@@ -136,6 +147,9 @@ module SnakeControl(
         for (i = 0; i < MaxSnakeLength; i = i + 1) begin
             if (ADDR_V[8:2] == SnakeState_Y[i] && ADDR_H[9:2] == SnakeState_X[i] && i < CurrLength)
                 is_snake <= 1;
+                // Determine if the snake has bit itself and end the game if that is the case
+            if (SnakeState_Y[0] == SnakeState_Y[i] && SnakeState_X[0] == SnakeState_X[i] && i < CurrLength && i > 0 && M_STATE == 1)
+                hit_itself <= 1;
         end
         
         // Select colour - yellow for snake, blue for background, red for target
@@ -145,17 +159,20 @@ module SnakeControl(
             colour_out <= 12'h00F;
         else 
             colour_out <= 12'hF00;
-            
+        hit_itself = 0;
         is_snake = 0;
     end
     
     always@(posedge CLK) begin
-        if (RESET)
+        if (RESET) begin
             CurrLength <= SnakeLength;
+            CountIdx <= 0;
+        end
         // If snake reaches a target, indicate it by setting reached register to 1 and extend the length of the snake
-        else if (TARGET_V == SnakeState_Y[0] && TARGET_H == SnakeState_X[0] && Counter == 0 && M_STATE == 1) begin
+        else if (TARGET_V == SnakeState_Y[0] && TARGET_H == SnakeState_X[0] && Counter[CountIdx] == 0 && M_STATE == 1) begin
             reached <= 1;
             CurrLength <= CurrLength + 1;
+            CountIdx <= CountIdx + 1;
         end
         else
             reached <= 0;
@@ -163,5 +180,6 @@ module SnakeControl(
    
     assign REACHED = reached;
     assign COLOUR = colour_out;
+    assign HIT = hit_itself;
          
 endmodule

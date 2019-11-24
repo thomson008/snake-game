@@ -43,6 +43,7 @@ module Game(
     wire reached_target;
     wire [6:0] vert_target;
     wire [7:0] horz_target;
+    wire hit_itself;
 
     
     Master master (
@@ -53,6 +54,7 @@ module Game(
         .BTN_U(BTN_U),
         .BTN_L(BTN_L),
         .BTN_R(BTN_R),
+        .HIT(hit_itself),
         .STATE(M_State)
     );
     
@@ -98,7 +100,8 @@ module Game(
         .TARGET_V(vert_target),
         .TARGET_H(horz_target),
         .COLOUR(snake_colour_out),
-        .REACHED(reached_target)
+        .REACHED(reached_target),
+        .HIT(hit_itself)
     );
     
     TargetGenerator target (
